@@ -1,7 +1,7 @@
 title: Skupper Hello World using YAML
 subtitle: A minimal HTTP application deployed across Kubernetes clusters using Skupper
 overview: |
-  This example is a variant of [Skupper Hello World][hello-world] that
+  This example is a variant of [Hello World deployed across sites using Skupper YAML][hello-world-yaml] that
   is deployed using YAML custom resources instead of imperative
   commands. The backend workload is deployed in a separate namespace.
 
@@ -18,7 +18,8 @@ overview: |
   In this scenario, each service runs in a different Kubernetes
   cluster.  The frontend runs in a namespace on cluster 1 called West,
   and the backend runs in a namespace on cluster 2 called North.
-  The North namespace is not a Skupper site.
+  The North namespace is not a Skupper site, but can be exposed through the East
+  site namespace.
 
   <img src="images/entities.svg" width="640"/>
 
@@ -26,7 +27,7 @@ overview: |
   frontend in another and maintain connectivity between the two
   services without exposing the backend to the public internet.
 
-  [hello-world]: https://github.com/skupperproject/skupper-example-hello-world
+  [hello-world-yaml]: https://github.com/skupperproject/skupper-example-yaml
 sites:
   west:
     title: West
@@ -66,13 +67,18 @@ steps:
         resource for exposing the backend in East to the local
         frontend
 
+      North:
+
+      * [backend.yaml](north/backend.yaml) - The Hello World backend
+        deployment
+      * [attachedconnector.yaml](north/attachedconnector.yaml) - A Skupper _AttachedConnector_
+        resource for exposing resource to site namespace
+
       East:
 
       * [site.yaml](east/site.yaml) - The Skupper _Site_ resource for
         East
-      * [backend.yaml](east/backend.yaml) - The Hello World backend
-        deployment
-      * [connector.yaml](east/connector.yaml) - A Skupper _Connector_
+      * [attachedconnectorbinding.yaml](east/attachedconnectorbinding.yaml) - A Skupper _AttachedConnectorBinding_
         resource for binding the backend to the listener in West
 
       Let's look at these resources in more detail.
@@ -169,7 +175,7 @@ steps:
 
       The backend is a standard Kubernetes deployment.
 
-      [backend.yaml](east/backend.yaml):
+      [backend.yaml](north/backend.yaml):
 
       ~~~ yaml
       apiVersion: apps/v1
@@ -195,28 +201,7 @@ steps:
                   - containerPort: 8080
       ~~~
 
-      The _Connector_ resource below configures the router to take
-      remote connections with routing key `backend` and forward them
-      to port 8080 on pods matching the selector `app=backend`.  See
-      the [Connector resource reference][connector-config] for more
-      information.
-
-      [connector-config]: https://skupperproject.github.io/refdog/resources/connector.html
-
-      [connector.yaml](east/connector.yaml):
-
-      ~~~ yaml
-      apiVersion: skupper.io/v1alpha1
-      kind: Connector
-      metadata:
-        name: backend
-        namespace: east
-      spec:
-        routingKey: backend
-        port: 8080
-        selector: app=backend
-      ~~~
-
+      
       ### Applying the resources
 
       Now we're ready to apply everything.  Use the `kubectl apply`
@@ -238,14 +223,22 @@ steps:
           apply: test
         - await_resource: deployment/frontend
       east:
-        - run: kubectl apply -f east/site.yaml -f east/backend.yaml -f east/connector.yaml
+        - run: kubectl apply -f east/site.yaml -f east/backend.yaml -f east/attachedconnectorbinding.yaml
           output: |
             site.skupper.io/east created
             deployment.apps/backend created
-            connector.skupper.io/backend created
+            attachedconnectorbinding.skupper.io/backend created
         - run: kubectl wait site/east --for condition=Ready --timeout 2m
+
+      north:
+        - run: kubectl apply -f north/backend.yaml -f east/attachedconnector.yaml
+          output: |
+            site.skupper.io/east created
+            deployment.apps/backend created
+            attachedconnector.skupper.io/backend created
           apply: test
         - await_resource: deployment/backend
+
   - standard: skupper/link_your_sites/kubernetes_cli
     preamble: |
       A Skupper _link_ is a channel for communication between two

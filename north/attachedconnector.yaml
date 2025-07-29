@@ -1,0 +1,8 @@
+apiVersion: skupper.io/v2alpha1
+kind: AttachedConnector
+metadata:
+  name: hello-world
+spec:
+  siteNamespace: east
+  selector: app=backend
+  port: 8080

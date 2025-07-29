@@ -162,9 +162,9 @@ East:
 
 * [site.yaml](east/site.yaml) - The Skupper _Site_ resource for
   East
-* [backend.yaml](east/backend.yaml) - The Hello World backend
+* [backend.yaml](north/backend.yaml) - The Hello World backend
   deployment
-* [connector.yaml](east/connector.yaml) - A Skupper _Connector_
+* [connector.yaml](east/attachedconnectorbinding.yaml) - A Skupper _Connector_
   resource for binding the backend to the listener in West
 
 Let's look at these resources in more detail.
@@ -261,7 +261,7 @@ metadata:
 
 The backend is a standard Kubernetes deployment.
 
-[backend.yaml](east/backend.yaml):
+[backend.yaml](north/backend.yaml):
 
 ~~~ yaml
 apiVersion: apps/v1
@@ -295,7 +295,7 @@ information.
 
 [connector-config]: https://skupperproject.github.io/refdog/resources/connector.html
 
-[connector.yaml](east/connector.yaml):
+[connector.yaml](east/attachedconnectorbinding.yaml):
 
 ~~~ yaml
 apiVersion: skupper.io/v1alpha1

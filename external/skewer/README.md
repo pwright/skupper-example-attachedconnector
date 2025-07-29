@@ -37,8 +37,8 @@ Change directory to the root of your example project:
 Add the Skewer code as a subdirectory:
 
     mkdir -p external
-    curl -sfL https://github.com/skupperproject/skewer/archive/v2.tar.gz | tar -C external -xz
-    mv external/skewer-2 external/skewer
+    curl -sfL https://github.com/skupperproject/skewer/archive/main.tar.gz | tar -C external -xz
+    mv external/skewer-main external/skewer
 
 Symlink the Skewer and Plano libraries into your `python` directory:
 
@@ -196,7 +196,7 @@ You can also use a named step from the library of [standard
 steps](#standard-steps):
 
 ~~~ yaml
-- standard: kubernetes/access_your_kubernetes_clusters
+- standard: kubernetes/set_up_your_clusters
 ~~~
 
 A **command**:
@@ -252,61 +252,32 @@ commands that we use a lot for our examples.
 
 The standard steps are defined in
 [python/skewer/standardsteps.yaml](python/skewer/standardsteps.yaml).
-They fall in three groups.
-
-Steps for setting up platforms:
+They are the following:
 
 ~~~
-platform/access_your_kubernetes_clusters
-platform/access_your_kubernetes_cluster
-platform/create_your_kubernetes_namespaces
-platform/create_your_kubernetes_namespace
-platform/set_up_your_podman_environments
-platform/set_up_your_podman_environment
-platform/install_skupper_on_your_kubernetes_clusters
-platform/install_skupper_on_your_kubernetes_cluster
-platform/install_skupper_in_your_podman_environments
-platform/install_skupper_in_your_podman_environment
+general/install_the_skupper_command_line_tool
+general/link_your_sites
+general/cleaning_up
+kubernetes/set_up_your_clusters
+kubernetes/set_up_your_kubernetes_cluster  # One cluster only
+kubernetes/create_your_sites
+kubernetes/link_your_sites
+kubernetes/access_the_frontend
+kubernetes/cleaning_up
+podman/set_up_your_podman_environment
+hello_world/deploy_the_frontend_and_backend
+hello_world/expose_the_backend
+hello_world/access_the_frontend
+hello_world/cleaning_up
 ~~~
 
-Steps for primary Skupper operations:
-
-~~~
-skupper/create_your_sites/kubernetes_cli
-skupper/create_your_sites/podman_cli
-skupper/link_your_sites/kubernetes_cli
-skupper/link_your_sites/podman_cli
-skupper/cleaning_up/kubernetes_cli
-skupper/cleaning_up/podman_cli
-~~~
-
-<!-- skupper/create_your_sites/kubernetes_yaml -->
-<!-- skupper/create_your_sites/podman_yaml -->
-<!-- skupper/link_your_sites/kubernetes_yaml -->
-<!-- skupper/link_your_sites/podman_yaml -->
-<!-- skupper/cleaning_up/kubernetes_yaml -->
-<!-- skupper/cleaning_up/podman_yaml -->
-
-Steps specific to the Hello World application:
-
-~~~
-hello_world/deploy_the_frontend_and_backend/kubernetes_cli
-hello_world/expose_the_backend_service/kubernetes_cli
-hello_world/access_the_frontend_service/kubernetes_cli
-hello_world/cleaning_up/kubernetes_cli
-~~~
-
-<!-- hello_world/deploy_the_frontend_and_backend/kubernetes_yaml -->
-<!-- hello_world/expose_the_backend_service/kubernetes_yaml -->
-<!-- hello_world/access_the_frontend_service/kubernetes_yaml -->
-<!-- hello_world/cleaning_up/kubernetes_yaml -->
-
-Some of the steps have a suffix indicating their target platform and
-interface: `kubernetes_cli`, `kubernetes_yaml`, `podman_cli`, and
-`podman_yaml`.
+The `general` steps are generic (or pretty generic) with respect to
+platform and application.  The `kubernetes` and `podman` steps are
+coupled to their platform.  The `hello_world` steps are specific to
+the Skupper Hello World application.
 
 **Note:** The `link_your_sites` and `cleaning_up` steps are less
-generic than some of the other steps.  For example, `cleaning_up`
+generic than the other `general` steps.  For example, `cleaning_up`
 doesn't delete any application workoads.  Check that the text and
 commands these steps produce are doing what you need for your example.
 If not, you need to provide a custom step.
@@ -315,7 +286,7 @@ You can create custom steps based on the standard steps by overriding
 the `title`, `preamble`, `commands`, or `postamble` fields.
 
 ~~~ yaml
-- standard: skupper/cleaning_up/kubernetes_cli
+- standard: kubernetes/cleaning_up
   commands:
     east:
      - run: skupper delete
@@ -329,7 +300,7 @@ the standard text inside your custom text by using the `@default@`
 placeholder:
 
 ~~~ yaml
-- standard: skupper/cleaning_up/kubernetes_cli
+- standard: general/cleaning_up
   preamble: |
     @default@
 
@@ -341,16 +312,14 @@ example might look like this:
 
 ~~~ yaml
 steps:
-  - standard: platform/access_your_kubernetes_clusters
-  - standard: platform/create_your_kubernetes_namespaces
-  - <your-custom-deploy-step>
-  - standard: platform/install_skupper_on_your_kubernetes_clusters
-  - standard: platform/install_the_skupper_command_line_tool
-  - standard: skupper/create_your_sites/kubernetes_cli
-  - standard: skupper/link_your_sites/kubernetes_cli
-  - <your-custom-expose-step>
-  - <your-custom-access-step>
-  - standard: skupper/cleaning_up/kubernetes_cli
+  - standard: general/install_the_skupper_command_line_tool
+  - standard: kubernetes/set_up_your_clusters
+  <your-custom-deploy-step>
+  - standard: kubernetes/create_your_sites
+  - standard: kubernetes/link_your_sites
+  <your-custom-expose-step>
+  <your-custom-access-step>
+  - standard: kubernetes/cleaning_up
 ~~~
 
 ## Demo mode
