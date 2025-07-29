@@ -1,8 +1,6 @@
-<!-- NOTE: This file is generated from skewer.yaml.  Do not edit it directly. -->
-
 # Skupper Hello World using YAML
 
-[![main](https://github.com/skupperproject/skupper-example-yaml/actions/workflows/main.yaml/badge.svg)](https://github.com/skupperproject/skupper-example-yaml/actions/workflows/main.yaml)
+[![main](https://github.com/pwright/skupper-example-attachedconnector/actions/workflows/main.yaml/badge.svg)](https://github.com/pwright/skupper-example-attachedconnector/actions/workflows/main.yaml)
 
 #### A minimal HTTP application deployed across Kubernetes clusters using Skupper
 
@@ -24,18 +22,20 @@ across cloud providers, data centers, and edge sites.
 * [Step 5: Link your sites](#step-5-link-your-sites)
 * [Step 6: Access the frontend service](#step-6-access-the-frontend-service)
 * [Cleaning up](#cleaning-up)
+* [Summary](#summary)
 * [Next steps](#next-steps)
 * [About this example](#about-this-example)
 
 ## Overview
 
-This example is a variant of [Skupper Hello World][hello-world] that
+This example is a variant of [Hello World deployed across sites using Skupper YAML][hello-world-yaml] that
 is deployed using YAML custom resources instead of imperative
-commands.
+commands. The backend workload is deployed in a separate namespace.
 
 It contains two services:
 
-* A backend service that exposes an `/api/hello` endpoint.  It
+* A backend service, deployed in the north namespace that exposes an 
+  `/api/hello` endpoint.  It
   returns greetings of the form `Hi, <your-name>.  I am <my-name>
   (<pod-name>)`.
 
@@ -44,7 +44,9 @@ It contains two services:
 
 In this scenario, each service runs in a different Kubernetes
 cluster.  The frontend runs in a namespace on cluster 1 called West,
-and the backend runs in a namespace on cluster 2 called East.
+and the backend runs in a namespace on cluster 2 called North.
+The North namespace is not a Skupper site, but can be exposed through the East
+site namespace.
 
 <img src="images/entities.svg" width="640"/>
 
@@ -52,18 +54,18 @@ Skupper enables you to place the backend in one cluster and the
 frontend in another and maintain connectivity between the two
 services without exposing the backend to the public internet.
 
-[hello-world]: https://github.com/skupperproject/skupper-example-hello-world
+[hello-world-yaml]: https://github.com/skupperproject/skupper-example-yaml
 
 ## Prerequisites
 
-* Access to at least one Kubernetes cluster, from [any provider you
-  choose][kube-providers].
-
 * The `kubectl` command-line tool, version 1.15 or later
-  ([installation guide][install-kubectl]).
+  ([installation guide][install-kubectl])
 
-[kube-providers]: https://skupper.io/start/kubernetes.html
+* Access to at least one Kubernetes cluster, from [any provider you
+  choose][kube-providers]
+
 [install-kubectl]: https://kubernetes.io/docs/tasks/tools/install-kubectl/
+[kube-providers]: https://skupper.io/start/kubernetes.html
 
 ## Step 1: Access your Kubernetes clusters
 
@@ -96,6 +98,13 @@ export KUBECONFIG=~/.kube/config-east
 <provider-specific login command>
 ~~~
 
+_**North:**_
+
+~~~ shell
+export KUBECONFIG=~/.kube/config-north
+<provider-specific login command>
+~~~
+
 **Note:** The login procedure varies by provider.
 
 ## Step 2: Create your Kubernetes namespaces
@@ -122,6 +131,13 @@ kubectl create namespace east
 kubectl config set-context --current --namespace east
 ~~~
 
+_**North:**_
+
+~~~ shell
+kubectl create namespace north
+kubectl config set-context --current --namespace north
+~~~
+
 ## Step 3: Install Skupper on your Kubernetes clusters
 
 Using Skupper on Kubernetes requires the installation of the
@@ -143,6 +159,12 @@ _**East:**_
 kubectl apply -f https://skupper.io/v2/install.yaml
 ~~~
 
+_**North:**_
+
+~~~ shell
+kubectl apply -f https://skupper.io/v2/install.yaml
+~~~
+
 ## Step 4: Apply your YAML resources
 
 To configure our example sites and service bindings, we are
@@ -158,13 +180,18 @@ West:
   resource for exposing the backend in East to the local
   frontend
 
+North:
+
+* [backend.yaml](north/backend.yaml) - The Hello World backend
+  deployment
+* [attachedconnector.yaml](north/attachedconnector.yaml) - A Skupper _AttachedConnector_
+  resource for exposing resource to site namespace
+
 East:
 
 * [site.yaml](east/site.yaml) - The Skupper _Site_ resource for
   East
-* [backend.yaml](north/backend.yaml) - The Hello World backend
-  deployment
-* [connector.yaml](east/attachedconnectorbinding.yaml) - A Skupper _Connector_
+* [attachedconnectorbinding.yaml](east/attachedconnectorbinding.yaml) - A Skupper _AttachedConnectorBinding_
   resource for binding the backend to the listener in West
 
 Let's look at these resources in more detail.
@@ -287,27 +314,6 @@ spec:
             - containerPort: 8080
 ~~~
 
-The _Connector_ resource below configures the router to take
-remote connections with routing key `backend` and forward them
-to port 8080 on pods matching the selector `app=backend`.  See
-the [Connector resource reference][connector-config] for more
-information.
-
-[connector-config]: https://skupperproject.github.io/refdog/resources/connector.html
-
-[connector.yaml](east/attachedconnectorbinding.yaml):
-
-~~~ yaml
-apiVersion: skupper.io/v1alpha1
-kind: Connector
-metadata:
-  name: backend
-  namespace: east
-spec:
-  routingKey: backend
-  port: 8080
-  selector: app=backend
-~~~
 
 ### Applying the resources
 
@@ -338,16 +344,22 @@ listener.skupper.io/backend created
 _**East:**_
 
 ~~~ shell
-kubectl apply -f east/site.yaml -f east/backend.yaml -f east/connector.yaml
+kubectl apply -f east/site.yaml -f east/backend.yaml -f east/attachedconnectorbinding.yaml
+kubectl wait site/east --for condition=Ready --timeout 2m
 ~~~
 
 _Sample output:_
 
 ~~~ console
-$ kubectl apply -f east/site.yaml -f east/backend.yaml -f east/connector.yaml
+$ kubectl apply -f east/site.yaml -f east/backend.yaml -f east/attachedconnectorbinding.yaml
 site.skupper.io/east created
 deployment.apps/backend created
-connector.skupper.io/backend created
+attachedconnectorbinding.skupper.io/backend created
+~~~
+
+_**North:**_
+
+~~~ shell
 ~~~
 
 ## Step 5: Link your sites
