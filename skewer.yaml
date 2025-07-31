@@ -222,22 +222,23 @@ steps:
         - run: kubectl wait site/west --for condition=Ready --timeout 2m
           apply: test
         - await_resource: deployment/frontend
-      east:
-        - run: kubectl apply -f east/site.yaml -f east/backend.yaml -f east/attachedconnectorbinding.yaml
-          output: |
-            site.skupper.io/east created
-            deployment.apps/backend created
-            attachedconnectorbinding.skupper.io/backend created
-        - run: kubectl wait site/east --for condition=Ready --timeout 2m
 
       north:
-        - run: kubectl apply -f north/backend.yaml -f east/attachedconnector.yaml
+        - run: kubectl apply -f north/backend.yaml -f north/attachedconnector.yaml
           output: |
             site.skupper.io/east created
             deployment.apps/backend created
             attachedconnector.skupper.io/backend created
           apply: test
         - await_resource: deployment/backend
+
+      east:
+        - run: kubectl apply -f east/site.yaml -f east/attachedconnectorbinding.yaml
+          output: |
+            site.skupper.io/east created
+            deployment.apps/backend created
+            attachedconnectorbinding.skupper.io/backend created
+        - run: kubectl wait site/east --for condition=Ready --timeout 2m
 
   - standard: skupper/link_your_sites/kubernetes_cli
     preamble: |
@@ -277,6 +278,15 @@ steps:
       to create the link.
 
       [install]: https://skupper.io/install/index.html
+
+  - title: Prompt for User Input
+    preamble: This step will ask the user for some input.
+    commands:
+      west: 
+        - run: |
+            echo "---"
+            read -p "Please enter your name: " USER_NAME
+
   - standard: hello_world/access_the_frontend_service/kubernetes_cli
   - standard: skupper/cleaning_up/kubernetes_cli
     commands:
